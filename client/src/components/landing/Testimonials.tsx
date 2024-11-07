@@ -14,6 +14,10 @@ const Testimonials: React.FC = () => {
             <p className="text-lg text-foreground">"A must-have tool for small business owners. Easy to use and very effective."</p>
             <p className="mt-4 text-accent font-semibold">- Jane Smith</p>
           </div>
+          <div className="bg-white p-6 rounded shadow-lg">
+            <p className="text-lg text-foreground">"I've tried several budgeting apps but FinPay is by far the best one out there."</p>
+            <p className="mt-4 text-accent font-semibold">- Michael Johnson</p>
+          </div>
         </div>
       </div>
     </section>

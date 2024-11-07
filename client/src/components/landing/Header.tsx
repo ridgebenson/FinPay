@@ -1,6 +1,6 @@
 import React from 'react';
-// import { UserIcon } from 'shadcn-icons';
 import { Link} from "react-router-dom";
+import { IoIosLogIn } from "react-icons/io";
 
 const Header: React.FC = () => {
   return (
@@ -15,7 +15,7 @@ const Header: React.FC = () => {
         </nav>
         <Link to="/login">
         <button className="flex items-center bg-accent text-white py-2 px-4 rounded ml-4 hover:bg-white hover:text-amber-500 transition duration-300">
-          {/* <UserIcon className="mr-2" />  */}
+          <IoIosLogIn className="mr-2" />
           Log In
         </button>
         </Link>

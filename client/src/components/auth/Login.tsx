@@ -20,8 +20,8 @@ const LoginPage: React.FC = () => {
       });
       if (!response.ok) throw new Error('Login failed. Please check your credentials.');
       const data = await response.json();
-      localStorage.setItem('token', data.token); // Store token for authenticated requests
-      navigate('/dashboard'); // Redirect on successful login
+      localStorage.setItem('token', data.token);
+      navigate('/dashboard');
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -61,6 +61,10 @@ const LoginPage: React.FC = () => {
           >
             Login
           </button>
+
+          <p className="text-center">
+            Don't have an account? <a href="/signup" className="text-accent">Register</a>
+          </p>
         </form>
       </div>
     </div>

@@ -102,6 +102,10 @@ const SignUpPage: React.FC = () => {
           >
             Sign Up
           </button>
+
+          <p className="text-center">
+            Already have an account? <a href="/login" className="text-accent">Login</a>
+          </p>
         </form>
       </div>
     </div>
