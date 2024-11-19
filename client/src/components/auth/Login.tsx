@@ -45,8 +45,10 @@ const LoginPage: React.FC = () => {
             onChange={handleChange}
             required
             className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+            data-test="email"
           />
           <input
+            data-test="pwd"
             type="password"
             name="password"
             placeholder="Password"
@@ -54,8 +56,10 @@ const LoginPage: React.FC = () => {
             onChange={handleChange}
             required
             className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+            
           />
           <button
+            data-test='lgn_btn'
             type="submit"
             className="w-full py-3 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-lg hover:opacity-90 transition duration-200"
           >

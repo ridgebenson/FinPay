@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import { IoIosLogIn } from "react-icons/io";
 
 const Header: React.FC = () => {
@@ -14,12 +14,11 @@ const Header: React.FC = () => {
           <a href="#contact" className="hover:text-accent">Contact</a>
         </nav>
         <Link to="/login">
-        <button className="flex items-center bg-accent text-white py-2 px-4 rounded ml-4 hover:bg-white hover:text-amber-500 transition duration-300">
-          <IoIosLogIn className="mr-2" />
-          Log In
-        </button>
+          <button data-test="login_button" className="flex items-center bg-accent text-white py-2 px-4 rounded ml-4 hover:bg-white hover:text-amber-500 transition duration-300">
+            <IoIosLogIn className="mr-2" />
+            Log In
+          </button>
         </Link>
-        
       </div>
     </header>
   );
