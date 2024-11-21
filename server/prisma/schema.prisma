@@ -14,10 +14,71 @@ datasource db {
 }
 
 model User {
-  id        Int     @id @default(autoincrement())
-  email     String  @unique
-  firstName String
-  lastName  String
-  password  String
-  phone     String  @unique
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  firstName    String
+  lastName     String
+  password     String
+  phone        String        @unique
+  transactions Transaction[] // One-to-Many : User to Transactions
+  budgets      Budget[] // One-to-Many: User to Budgets
+  categories   Category[] // One-to-Many: User to Categories
+  reports      Report[] // One-to-Many: User to Reports
+}
+
+model Transaction {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  budgetId    Int?
+  budget      Budget?   @relation(fields: [budgetId], references: [id])
+  amount      Float // Positive for income, negative for expenses
+  description String
+  type        String // ENUM-like field: 'income' or 'expense'
+  date        DateTime  @default(now())
+}
+
+model Category {
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  user         User             @relation(fields: [userId], references: [id])
+  name         String
+  type         String // ENUM-like field: 'income' or 'expense'
+  transactions Transaction[] // One-to-Many: Category to Transactions
+  budgets      BudgetCategory[] // Many-to-Many: Category to Budgets
+  Budget       Budget[]
+}
+
+model Budget {
+  id             Int              @id @default(autoincrement())
+  userId         Int
+  user           User             @relation(fields: [userId], references: [id])
+  categoryId     Int
+  category       Category         @relation(fields: [categoryId], references: [id])
+  transactions   Transaction[] // One-to-Many: Budget to Transactions
+  amount         Float // Budgeted amount
+  startDate      DateTime
+  endDate        DateTime
+  BudgetCategory BudgetCategory[]
+}
+
+model BudgetCategory {
+  id         Int      @id @default(autoincrement())
+  budgetId   Int
+  categoryId Int
+  budget     Budget   @relation(fields: [budgetId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model Report {
+  id            Int   @id @default(autoincrement())
+  userId        Int
+  user          User  @relation(fields: [userId], references: [id])
+  month         Int // Month of the report (1-12)
+  year          Int // Year of the report
+  totalIncome   Float @default(0)
+  totalExpenses Float @default(0)
+  savings       Float @default(0) // TotalIncome - TotalExpenses
 }

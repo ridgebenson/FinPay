@@ -1,0 +1,14 @@
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  // ...existing properties...
+  budgetId  Int
+  budget    Budget   @relation(fields: [budgetId], references: [id])
+  // ...existing properties...
+}
+
+model Budget {
+  id          Int           @id @default(autoincrement())
+  // ...existing properties...
+  transactions Transaction[]
+  // ...existing properties...
+}

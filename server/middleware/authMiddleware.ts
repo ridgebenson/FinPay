@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from './../utils/jwtUtils';
 
-const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+interface AuthenticatedRequest extends Request {
+  user?: any;
+}
+
+const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   const token = req.cookies.token ||req.header('Authorization')?.replace('Bearer ', '');
 
   if (!token) {
@@ -11,7 +15,7 @@ const authenticate = (req: Request, res: Response, next: NextFunction): void => 
 
   try {
     const decoded = verifyToken(token);
-    req.body.user = decoded;
+    (req as AuthenticatedRequest).user = decoded;
     next();
   } catch (error) {
     res.status(400).json({ error: 'Invalid token' });
