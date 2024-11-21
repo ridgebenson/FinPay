@@ -11,16 +11,34 @@ const createTransaction = async (req: Request, res: Response): Promise<void> => 
       return;
     }
   
-    const { userId, categoryId, amount, description, type, date } = req.body;
+    const { userId, categoryId, budgetId, amount, description, type, date } = req.body;
   
     try {
-      const transaction = await prisma.transaction.create({
-        data: { userId, categoryId, amount, description, type, date },
-      });
-      res.status(201).json({ message: 'Transaction created successfully', transaction });
-    } catch (error) {
-      res.status(500).json({ error: (error as any).message });
-    }
+        // Check if the categoryId exists
+        if (categoryId) {
+          const category = await prisma.category.findUnique({ where: { id: categoryId } });
+          if (!category) {
+            res.status(400).json({ error: 'Invalid categoryId. Category does not exist.' });
+            return;
+          }
+        }
+    
+        // Check if the budgetId exists
+        if (budgetId) {
+          const budget = await prisma.budget.findUnique({ where: { id: budgetId } });
+          if (!budget) {
+            res.status(400).json({ error: 'Invalid budgetId. Budget does not exist.' });
+            return;
+          }
+        }
+    
+        const transaction = await prisma.transaction.create({
+          data: { userId, categoryId, amount, description, type, date, budgetId },
+        });
+        res.status(201).json({ message: 'Transaction created successfully', transaction });
+      } catch (error) {
+        res.status(500).json({ error: (error as any).message });
+      }
   };
   
 
@@ -60,27 +78,42 @@ const updateTransaction = async (req: Request, res: Response): Promise<void> => 
     }
     
     const { id } = req.params;
-    const { categoryId, amount, description, type, date } = req.body;
+    const { categoryId, budgetId, amount, description, type, date } = req.body;
     
     try {
         // Check if the transaction exists
-        const existingTransaction = await prisma.transaction.findUnique({
-            where: { id: parseInt(id) }
-        });
-        
-        if (!existingTransaction) {
-            res.status(404).json({ error: 'Transaction not found' });
-            return;
+        const transaction = await prisma.transaction.findUnique({ where: { id: parseInt(id) } });
+        if (!transaction) {
+          res.status(404).json({ error: 'Transaction not found' });
+          return;
         }
-
-        const transaction = await prisma.transaction.update({
-            where: { id: parseInt(id) },
-            data: { categoryId, amount, description, type, date: new Date(date) },
+    
+        // Check if the categoryId exists
+        if (categoryId) {
+          const category = await prisma.category.findUnique({ where: { id: categoryId } });
+          if (!category) {
+            res.status(400).json({ error: 'Invalid categoryId. Category does not exist.' });
+            return;
+          }
+        }
+    
+        // Check if the budgetId exists
+        if (budgetId) {
+          const budget = await prisma.budget.findUnique({ where: { id: budgetId } });
+          if (!budget) {
+            res.status(400).json({ error: 'Invalid budgetId. Budget does not exist.' });
+            return;
+          }
+        }
+    
+        const updatedTransaction = await prisma.transaction.update({
+          where: { id: parseInt(id) },
+          data: { categoryId, budgetId, amount, description, type, date },
         });
-        res.status(200).json({ message: 'Transaction updated successfully', transaction });
-    } catch (error) {
-        res.status(400).json({ error: (error as any).message });
-    }
+        res.status(200).json({ message: 'Transaction updated successfully', updatedTransaction });
+      } catch (error) {
+        res.status(500).json({ error: (error as any).message });
+      }
 };
 
 const deleteTransaction = async (req: Request, res: Response): Promise<void> => {

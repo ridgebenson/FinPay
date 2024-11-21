@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { createReport, getReports, updateReport, deleteReport } from '../controllers/reportController';
+import { generateReport, getAllReports, updateReport, deleteReport, getReportById } from '../controllers/reportController';
 import authMiddleware from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.post('/', authMiddleware, createReport);
-router.get('/', authMiddleware, getReports);
+router.post('/', authMiddleware, generateReport);
+router.get('/', authMiddleware, getAllReports);
+router.get('/:id', authMiddleware, getReportById);
 router.put('/:id', authMiddleware, updateReport);
 router.delete('/:id', authMiddleware, deleteReport);
 

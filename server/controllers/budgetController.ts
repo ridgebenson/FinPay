@@ -1,34 +1,27 @@
 import { Request, Response } from 'express';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-  };
-}
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+interface AuthenticatedRequest extends Request {
+  user: { id: string };
+}
+
 // Create a new budget
 const createBudget = async (req: Request, res: Response): Promise<void> => {
-  const { userId, categoryId, amount, startDate, endDate } = req.body;
+  const { categoryId, amount, startDate, endDate } = req.body;
   const authReq = req as AuthenticatedRequest;
-
-  if (!authReq.user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  const userId = parseInt(authReq.user.id);
 
   try {
-    // Ensure user and category exist
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    // Ensure category exists
     const category = await prisma.category.findUnique({ where: { id: categoryId } });
 
-    if (!user || !category) {
-      res.status(404).json({ error: 'User or Category not found' });
+    if (!category) {
+      res.status(404).json({ error: 'Category not found' });
     }
 
-    // Create the budget and include the category in the response
+    // Create the budget
     const budget = await prisma.budget.create({
       data: {
         userId,
@@ -38,7 +31,15 @@ const createBudget = async (req: Request, res: Response): Promise<void> => {
         endDate,
       },
       include: {
-        category: true,  // Include the category data in the response
+        category: true,
+      },
+    });
+
+    // Link to the BudgetCategory table
+    await prisma.budgetCategory.create({
+      data: {
+        budgetId: budget.id,
+        categoryId,
       },
     });
 
@@ -48,40 +49,25 @@ const createBudget = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// Get all budgets (with user and category details)
+// Get all budgets for the authenticated user
 const getBudgets = async (req: Request, res: Response): Promise<void> => {
   const authReq = req as AuthenticatedRequest;
-
-  if (!authReq.user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
-  const userId = authReq.user.id; // Assuming user ID is stored in req.user after authentication middleware
+  const userId = parseInt(authReq.user.id);
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
   try {
     const budgets = await prisma.budget.findMany({
-      where: { userId: parseInt(userId) },
-      include: {
-        category: true,  // Include category details
-      },
-      skip: skip,
+      where: { userId },
+      include: { category: true },
+      skip,
       take: limit,
     });
 
-    const totalBudgets = await prisma.budget.count({
-      where: { userId: parseInt(userId) },
-    });
+    const totalBudgets = await prisma.budget.count({ where: { userId } });
 
-    res.status(200).json({
-      total: totalBudgets,
-      page: page,
-      limit: limit,
-      budgets: budgets,
-    });
+    res.status(200).json({ total: totalBudgets, page, limit, budgets });
   } catch (error) {
     res.status(400).json({ error: (error as any).message });
   }
@@ -93,21 +79,16 @@ const updateBudget = async (req: Request, res: Response) => {
   const { categoryId, amount, startDate, endDate } = req.body;
   const authReq = req as AuthenticatedRequest;
 
-  if (!authReq.user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
   try {
-    // Ensure the budget exists
-    const budgetExists = await prisma.budget.findUnique({
-      where: { id: parseInt(id) }
+    // Ensure budget exists
+    const budget = await prisma.budget.findUnique({
+      where: { id: parseInt(id) },
     });
-    if (!budgetExists) {
+    if (!budget) {
       res.status(404).json({ error: 'Budget not found' });
     }
 
-    // Check if category exists
+    // Check category existence
     const category = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!category) {
       res.status(404).json({ error: 'Category not found' });
@@ -115,12 +96,14 @@ const updateBudget = async (req: Request, res: Response) => {
 
     const updatedBudget = await prisma.budget.update({
       where: { id: parseInt(id) },
-      data: {
-        categoryId,
-        amount,
-        startDate,
-        endDate,
-      },
+      data: { categoryId, amount, startDate, endDate },
+    });
+
+    // Update BudgetCategory
+    await prisma.budgetCategory.upsert({
+      where: { id: updatedBudget.id },
+      create: { budgetId: updatedBudget.id, categoryId },
+      update: { categoryId },
     });
 
     res.status(200).json(updatedBudget);
@@ -129,40 +112,123 @@ const updateBudget = async (req: Request, res: Response) => {
   }
 };
 
-// Delete a budget (check if there are related transactions first)
+// Delete a budget (check for related transactions)
 const deleteBudget = async (req: Request, res: Response) => {
   const { id } = req.params;
   const authReq = req as AuthenticatedRequest;
 
-  if (!authReq.user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
   try {
-    // Example: Use raw SQL queries to ensure flexibility in fetching data
-    const transactions = await prisma.$queryRaw<any[]>`
-      SELECT * FROM "Transaction" WHERE "budgetId" = ${parseInt(id)};
-    `;
+    // Check if budget has related transactions
+    const transactions = await prisma.transaction.count({
+      where: { budgetId: parseInt(id) },
+    });
 
-    if (transactions.length > 0) {
+    if (transactions > 0) {
       res.status(400).json({
         error: 'Cannot delete budget with existing transactions. Please remove transactions first.',
       });
     }
 
-    // Proceed with the deletion
-    await prisma.budget.delete({
-      where: {
-        id: parseInt(id),
-      },
-    });
+    // Delete BudgetCategory entries and the budget
+    await prisma.budgetCategory.deleteMany({ where: { budgetId: parseInt(id) } });
+    await prisma.budget.delete({ where: { id: parseInt(id) } });
 
     res.status(204).send();
   } catch (error) {
-    console.error(error);
     res.status(400).json({ error: (error as any).message });
   }
 };
 
-export { createBudget, getBudgets, updateBudget, deleteBudget };
+// Budget Tracking
+
+// Budget Utilization
+const getBudgetUtilization = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params; // Budget ID
+  const authReq = req as AuthenticatedRequest;
+  const userId = parseInt(authReq.user.id); // Authenticated user ID
+
+  try {
+    const budget = await prisma.budget.findFirst({
+      where: { id: parseInt(id), userId },
+    });
+
+    if (!budget) {
+      res.status(404).json({ error: 'Budget not found' });
+      return;
+    }
+
+    const totalSpent = await prisma.transaction.aggregate({
+      where: { budgetId: budget.id },
+      _sum: { amount: true },
+    });
+
+    const spentAmount = totalSpent._sum.amount || 0;
+
+    res.status(200).json({
+      budgetId: budget.id,
+      budgetAmount: budget.amount,
+      spentAmount,
+      remainingAmount: budget.amount - spentAmount,
+      startDate: budget.startDate,
+      endDate: budget.endDate,
+    });
+  } catch (error) {
+    res.status(400).json({ error: (error as any).message });
+  }
+};
+
+const getAllBudgetsWithUtilization = async (req: Request, res: Response): Promise<void> => {
+  const authReq = req as AuthenticatedRequest;
+  const userId = parseInt(authReq.user.id);
+
+  try {
+    // Log the userId for debugging
+    console.log('User ID:', userId);
+
+    // Fetch budgets for the authenticated user
+    const budgets = await prisma.budget.findMany({
+      where: { userId }, // Ensure this filters by the correct user
+    });
+
+    if (budgets.length === 0) {
+      res.status(200).json({ message: 'No budgets found for this user.' });
+      return;
+    }
+
+    // Calculate utilization for each budget
+    const budgetsWithUtilization = await Promise.all(
+      budgets.map(async (budget) => {
+        const totalSpent = await prisma.transaction.aggregate({
+          where: { budgetId: budget.id },
+          _sum: { amount: true },
+        });
+
+        const spentAmount = totalSpent._sum.amount || 0;
+
+        return {
+          budgetId: budget.id,
+          budgetAmount: budget.amount,
+          spentAmount,
+          remainingAmount: budget.amount - spentAmount,
+          startDate: budget.startDate,
+          endDate: budget.endDate,
+        };
+      })
+    );
+
+    res.status(200).json(budgetsWithUtilization);
+  } catch (error) {
+    console.error('Error fetching budgets with utilization:', error);
+    res.status(400).json({ error: (error as any).message });
+  }
+};
+
+
+
+export { createBudget, 
+  getBudgets, 
+  updateBudget, 
+  deleteBudget,
+  getBudgetUtilization,
+  getAllBudgetsWithUtilization
+};

@@ -4,7 +4,10 @@ import { body, validationResult, param } from 'express-validator';
 const validateCreateTransaction: RequestHandler[] = [
     body('userId').isNumeric().withMessage('User ID must be a number'),
     body('categoryId').isNumeric().withMessage('Category ID must be a number'),
+    body('budgetId').optional().isNumeric().withMessage('Budget ID must be a number'),
     body('amount').isNumeric().withMessage('Amount must be a number'),
+    body('description').isString().withMessage('Description must be a string'),
+    body('type').isIn(['income', 'expense']).withMessage('Type must be either income or expense'),
     body('date').custom((value) => {
         if (isNaN(Date.parse(value))) {
             throw new Error('Date must be a valid date');
@@ -24,7 +27,10 @@ const validateCreateTransaction: RequestHandler[] = [
 
 const validateUpdateTransaction: RequestHandler[] = [
     body('categoryId').isNumeric().withMessage('Category ID must be a number'),
+    body('budgetId').optional().isNumeric().withMessage('Budget ID must be a number'),
     body('amount').isNumeric().withMessage('Amount must be a number'),
+    body('description').optional().isString().withMessage('Description must be a string'),
+    body('type').optional().isIn(['income', 'expense']).withMessage('Type must be either income or expense'),
     body('date').custom((value) => {
         if (isNaN(Date.parse(value))) {
             throw new Error('Date must be a valid date');
